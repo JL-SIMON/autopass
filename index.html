@@ -45,13 +45,11 @@
                 <label for="template">Choisir un modèle de document</label>
                 <select id="template" name="template" required>
                     <option value="madagascar_passport">Passeport - Madagascar</option>
-                    <!-- Les nouveaux templates seront ajoutés ici -->
                     <option value="disabled" disabled>Bientôt: Carte d'Identité - France</option>
                 </select>
             </div>
             <hr class="full-width" style="border: 0; border-top: 1px solid #eee; margin: 1em 0;">
             <div class="form-grid">
-                <!-- Les champs du formulaire restent les mêmes -->
                 <div class="form-group"><label for="nom">Nom</label><input type="text" id="nom" name="nom" required></div>
                 <div class="form-group"><label for="prenom">Prénom</label><input type="text" id="prenom" name="prenom" required></div>
                 <div class="form-group"><label for="ddn">Date de Naissance (JJ/MM/AAAA)</label><input type="text" id="ddn" name="ddn" placeholder="02/01/1989" required></div>
@@ -61,8 +59,15 @@
                 <div class="form-group"><label for="taille">Taille (cm)</label><input type="number" id="taille" name="taille" required></div>
                 <div class="form-group full-width"><label for="al1">Adresse Ligne 1</label><input type="text" id="al1" name="al1" required></div>
                 <div class="form-group full-width"><label for="al2">Adresse Ligne 2</label><input type="text" id="al2" name="al2"></div>
-                <div class="form-group full-width"><label for="photo">Photo d'identité (le fond sera retiré automatiquement)</label><input type="file" id="photo" name="photo" accept="image/*" required></div>
-                <div class="form-group full-width"><label for="access_key">Votre Clé d'Accès</label><input type="text" id="access_key" name="access_key" required></div>
+                <!-- INSTRUCTION MODIFIÉE ICI -->
+                <div class="form-group full-width">
+                    <label for="photo">Photo d'identité (PNG avec fond transparent)</label>
+                    <input type="file" id="photo" name="photo" accept="image/png" required>
+                </div>
+                <div class="form-group full-width">
+                    <label for="access_key">Votre Clé d'Accès</label>
+                    <input type="text" id="access_key" name="access_key" required>
+                </div>
             </div>
             <button type="submit" class="btn">Générer l'image</button>
         </form>
@@ -73,12 +78,9 @@
     <!-- Assistant IA Widget -->
     <div id="ai-chat-widget">
         <div class="chat-header">Assistant d'aide</div>
-        <div class="chat-body" id="chat-body">
-            <p>Bonjour ! Comment puis-je vous aider ?</p>
-        </div>
+        <div class="chat-body" id="chat-body"><p>Bonjour ! Comment puis-je vous aider ?</p></div>
         <div class="chat-footer">
-            <input type="text" id="chat-input" placeholder="Posez votre question...">
-            <button id="send-chat-btn">Envoyer</button>
+            <input type="text" id="chat-input" placeholder="Posez votre question..."><button id="send-chat-btn">Envoyer</button>
         </div>
     </div>
     <button id="ai-chat-button">?</button>
@@ -87,12 +89,7 @@
         const form = document.getElementById('generator-form');
         const statusDiv = document.getElementById('status');
         const resultContainer = document.getElementById('result-container');
-        
-        // --- MODIFICATION IMPORTANTE ---
-        // L'URL pointe maintenant vers votre serveur PythonAnywhere.
         const imageGeneratorApiUrl = 'https://JLsimon9999.pythonanywhere.com/generate'; 
-        
-        // L'URL de votre fonction Netlify pour l'IA
         const aiApiUrl = '/.netlify/functions/ask-gemini';
 
         form.addEventListener('submit', async (e) => {
@@ -100,38 +97,28 @@
             statusDiv.textContent = 'Génération en cours, veuillez patienter...';
             statusDiv.style.color = '#333';
             resultContainer.innerHTML = '';
-
             const formData = new FormData(form);
 
             try {
-                const response = await fetch(imageGeneratorApiUrl, {
-                    method: 'POST',
-                    body: formData
-                });
-
+                const response = await fetch(imageGeneratorApiUrl, { method: 'POST', body: formData });
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.error || 'Une erreur est survenue.');
                 }
-
                 const imageBlob = await response.blob();
                 const imageUrl = URL.createObjectURL(imageBlob);
-                
                 const imgElement = document.createElement('img');
                 imgElement.id = 'result-image';
                 imgElement.src = imageUrl;
-                
                 resultContainer.appendChild(imgElement);
                 statusDiv.textContent = 'Génération terminée !';
                 statusDiv.style.color = 'green';
-
             } catch (error) {
                 statusDiv.textContent = `Erreur : ${error.message}`;
                 statusDiv.style.color = 'red';
             }
         });
 
-        // --- Logique de l'assistant IA ---
         const chatWidget = document.getElementById('ai-chat-widget');
         const chatButton = document.getElementById('ai-chat-button');
         const chatInput = document.getElementById('chat-input');
@@ -146,42 +133,23 @@
         const handleSendMessage = async () => {
             const userMessage = chatInput.value.trim();
             if (!userMessage) return;
-
-            // Afficher le message de l'utilisateur
             chatBody.innerHTML += `<p><strong>Vous:</strong> ${userMessage}</p>`;
             chatInput.value = '';
             chatBody.scrollTop = chatBody.scrollHeight;
-
             try {
-                // Appeler la fonction Netlify
-                const response = await fetch(aiApiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: userMessage })
-                });
-
+                const response = await fetch(aiApiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: userMessage }) });
                 if (!response.ok) throw new Error('L\'IA ne répond pas.');
-
                 const data = await response.json();
                 const aiMessage = data.text || 'Désolé, je n\'ai pas compris.';
-                
-                // Afficher la réponse de l'IA
                 chatBody.innerHTML += `<p><strong>Assistant:</strong> ${aiMessage}</p>`;
                 chatBody.scrollTop = chatBody.scrollHeight;
-
             } catch (error) {
                 chatBody.innerHTML += `<p><strong>Assistant:</strong> Erreur: ${error.message}</p>`;
                 chatBody.scrollTop = chatBody.scrollHeight;
             }
         };
-
         sendChatBtn.addEventListener('click', handleSendMessage);
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                handleSendMessage();
-            }
-        });
-
+        chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { handleSendMessage(); } });
     </script>
 </body>
 </html>
