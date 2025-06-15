@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Document Intelligent</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --light-gray: #f4f4f9;
+            --dark-gray: #333;
+            --white: #fff;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--light-gray); color: var(--dark-gray); margin: 0; padding: 2em; display: flex; justify-content: center; align-items: flex-start; }
+        .container { max-width: 700px; width: 100%; background: var(--white); padding: 2em; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #444; margin-bottom: 1em; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.2em; }
+        .form-group { display: flex; flex-direction: column; }
+        label { margin-bottom: 0.5em; font-weight: 600; font-size: 0.9em; }
+        input, select { padding: 0.8em; border: 1px solid #ccc; border-radius: 6px; font-size: 1em; transition: border-color 0.3s, box-shadow 0.3s; }
+        input:focus, select:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25); outline: none; }
+        .full-width { grid-column: 1 / -1; }
+        .btn { display: block; width: 100%; padding: 1em; background-color: var(--primary-color); color: var(--white); border: none; border-radius: 6px; font-size: 1.2em; font-weight: bold; cursor: pointer; margin-top: 1.5em; transition: background-color 0.3s; }
+        .btn:hover { background-color: #0056b3; }
+        #status { text-align: center; margin-top: 1em; font-weight: bold; min-height: 25px; }
+        #result-container { text-align: center; margin-top: 1em; }
+        #result-image { max-width: 100%; border: 1px solid #ddd; border-radius: 8px; }
+
+        /* --- Assistant IA --- */
+        #ai-chat-button { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background-color: var(--primary-color); color: var(--white); border-radius: 50%; border: none; font-size: 24px; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: transform 0.2s; }
+        #ai-chat-button:hover { transform: scale(1.1); }
+        #ai-chat-widget { position: fixed; bottom: 90px; right: 20px; width: 350px; height: 450px; background: var(--white); border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.2); display: none; flex-direction: column; overflow: hidden; }
+        .chat-header { background: var(--primary-color); color: white; padding: 1em; font-weight: bold; }
+        .chat-body { flex-grow: 1; padding: 1em; overflow-y: auto; }
+        .chat-footer { border-top: 1px solid #eee; padding: 0.5em; display: flex; }
+        #chat-input { flex-grow: 1; border: none; padding: 0.8em; outline: none; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Générateur de Document Intelligent</h1>
+        <form id="generator-form">
+            <div class="form-group full-width">
+                <label for="template">Choisir un modèle de document</label>
+                <select id="template" name="template" required>
+                    <option value="madagascar_passport">Passeport - Madagascar</option>
+                    <!-- Les nouveaux templates seront ajoutés ici -->
+                    <option value="disabled" disabled>Bientôt: Carte d'Identité - France</option>
+                </select>
+            </div>
+            <hr class="full-width" style="border: 0; border-top: 1px solid #eee; margin: 1em 0;">
+            <div class="form-grid">
+                <!-- Les champs du formulaire restent les mêmes -->
+                <div class="form-group"><label for="nom">Nom</label><input type="text" id="nom" name="nom" required></div>
+                <div class="form-group"><label for="prenom">Prénom</label><input type="text" id="prenom" name="prenom" required></div>
+                <div class="form-group"><label for="ddn">Date de Naissance (JJ/MM/AAAA)</label><input type="text" id="ddn" name="ddn" placeholder="02/01/1989" required></div>
+                <div class="form-group"><label for="sexe">Sexe</label><select id="sexe" name="sexe" required><option value="M">Masculin</option><option value="F">Féminin</option></select></div>
+                <div class="form-group"><label for="ldn">Lieu de Naissance</label><input type="text" id="ldn" name="ldn" required></div>
+                <div class="form-group"><label for="profession">Profession</label><input type="text" id="profession" name="profession" required></div>
+                <div class="form-group"><label for="taille">Taille (cm)</label><input type="number" id="taille" name="taille" required></div>
+                <div class="form-group full-width"><label for="al1">Adresse Ligne 1</label><input type="text" id="al1" name="al1" required></div>
+                <div class="form-group full-width"><label for="al2">Adresse Ligne 2</label><input type="text" id="al2" name="al2"></div>
+                <div class="form-group full-width"><label for="photo">Photo d'identité (le fond sera retiré automatiquement)</label><input type="file" id="photo" name="photo" accept="image/*" required></div>
+                <div class="form-group full-width"><label for="access_key">Votre Clé d'Accès</label><input type="text" id="access_key" name="access_key" required></div>
+            </div>
+            <button type="submit" class="btn">Générer l'image</button>
+        </form>
+        <div id="status"></div>
+        <div id="result-container"></div>
+    </div>
+
+    <!-- Assistant IA Widget -->
+    <div id="ai-chat-widget">
+        <div class="chat-header">Assistant d'aide</div>
+        <div class="chat-body" id="chat-body">
+            <p>Bonjour ! Comment puis-je vous aider ?</p>
+        </div>
+        <div class="chat-footer">
+            <input type="text" id="chat-input" placeholder="Posez votre question...">
+            <button id="send-chat-btn">Envoyer</button>
+        </div>
+    </div>
+    <button id="ai-chat-button">?</button>
+
+    <script>
+        const form = document.getElementById('generator-form');
+        const statusDiv = document.getElementById('status');
+        const resultContainer = document.getElementById('result-container');
+        // L'URL de votre backend PythonAnywhere
+        const imageGeneratorApiUrl = 'https://VOTRE_NOM_UTILISATEUR.pythonanywhere.com/generate'; 
+        // L'URL de votre fonction Netlify pour l'IA
+        const aiApiUrl = '/.netlify/functions/ask-gemini';
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            statusDiv.textContent = 'Génération en cours, veuillez patienter...';
+            statusDiv.style.color = '#333';
+            resultContainer.innerHTML = '';
+
+            const formData = new FormData(form);
+
+            try {
+                const response = await fetch(imageGeneratorApiUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Une erreur est survenue.');
+                }
+
+                const imageBlob = await response.blob();
+                const imageUrl = URL.createObjectURL(imageBlob);
+                
+                const imgElement = document.createElement('img');
+                imgElement.id = 'result-image';
+                imgElement.src = imageUrl;
+                
+                resultContainer.appendChild(imgElement);
+                statusDiv.textContent = 'Génération terminée !';
+                statusDiv.style.color = 'green';
+
+            } catch (error) {
+                statusDiv.textContent = `Erreur : ${error.message}`;
+                statusDiv.style.color = 'red';
+            }
+        });
+
+        // --- Logique de l'assistant IA ---
+        const chatWidget = document.getElementById('ai-chat-widget');
+        const chatButton = document.getElementById('ai-chat-button');
+        const chatInput = document.getElementById('chat-input');
+        const chatBody = document.getElementById('chat-body');
+        const sendChatBtn = document.getElementById('send-chat-btn');
+
+        chatButton.addEventListener('click', () => {
+            const isHidden = chatWidget.style.display === 'none' || chatWidget.style.display === '';
+            chatWidget.style.display = isHidden ? 'flex' : 'none';
+        });
+
+        const handleSendMessage = async () => {
+            const userMessage = chatInput.value.trim();
+            if (!userMessage) return;
+
+            // Afficher le message de l'utilisateur
+            chatBody.innerHTML += `<p><strong>Vous:</strong> ${userMessage}</p>`;
+            chatInput.value = '';
+            chatBody.scrollTop = chatBody.scrollHeight;
+
+            try {
+                // Appeler la fonction Netlify
+                const response = await fetch(aiApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: userMessage })
+                });
+
+                if (!response.ok) throw new Error('L\'IA ne répond pas.');
+
+                const data = await response.json();
+                const aiMessage = data.text || 'Désolé, je n\'ai pas compris.';
+                
+                // Afficher la réponse de l'IA
+                chatBody.innerHTML += `<p><strong>Assistant:</strong> ${aiMessage}</p>`;
+                chatBody.scrollTop = chatBody.scrollHeight;
+
+            } catch (error) {
+                chatBody.innerHTML += `<p><strong>Assistant:</strong> Erreur: ${error.message}</p>`;
+                chatBody.scrollTop = chatBody.scrollHeight;
+            }
+        };
+
+        sendChatBtn.addEventListener('click', handleSendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleSendMessage();
+            }
+        });
+
+    </script>
+</body>
+</html>
